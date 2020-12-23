@@ -8,6 +8,20 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 void processInput(GLFWwindow* window);
 
+// Vertex shader source
+const char* vertexShaderSource = "#version 330 core\n"
+    "layout (location = 0) in vec3 aPos;\n"
+    "void main() {\n"
+    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "}\0";
+
+// Fragment shader source
+const char* fragmentShaderSource = "#version 330 core\n"
+    "out vec4 FragColor;\n"
+    "void main() {\n"
+    "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+    "}\0";
+
 
 int main() {
     glfwInit(); // Initialize GLFW
@@ -39,6 +53,83 @@ int main() {
 
     // We register the callback functions after we've created the window and before the render loop is initiated. 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    // Making a triangle:
+
+    // Triangle vertices
+    float vertices[] = {
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+    };
+
+    // Generate buffer (VBO)
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+
+    // Bind GL_ARRAY_BUFFER to the VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    // Copy vertex data into the buffer's memory
+    // (Type of buffer we want to copy data into, size of data, actual data, how we want the GPU to manage the given data)
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // We've now stored the triangle's vertex data on the GPU (managed by VBO)
+
+    // Vertex shader
+    unsigned int vertexShader;
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+    // Attach shader source to shader object and compile shader
+    // (Shader object to compile, how many strings we're passing as source, actual source, NULL)
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    // Check errors!
+    int  success;
+    char infoLog[512];
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+    if (!success) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+
+    // Fragment shader
+    unsigned int fragmentShader;
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    // Check errors!
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+
+    if (!success) {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+
+    // Create shader program object
+    unsigned int shaderProgram;
+    shaderProgram = glCreateProgram();
+
+    // Attach previously compiled shaders then link them with glLinkProgram
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    // Check for errors
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+    }
+
+    // Attach program
+    glUseProgram(shaderProgram);
+    // Every shader and rendering call will now use this program object (and thus the shaders)
+    // Delete shader objects after linking
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
     // Simple render loop
     while (!glfwWindowShouldClose(window)) {
